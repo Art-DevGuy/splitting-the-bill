@@ -53,6 +53,11 @@
                 font-weight: bold;
                 background: #eef;
             }
+
+            .unassigned-row{
+                background:#ffcccc;
+            }
+
         </style>
     </head>
 
@@ -177,11 +182,14 @@
             }
 
             function toggleSelection(itemIndex, personIndex, checked) {
-                if (!selections[itemIndex]) selections[itemIndex] = {};
+                if(!selections[itemIndex])
+                    selections[itemIndex]={}
 
-                selections[itemIndex][personIndex] = checked;
+                selections[itemIndex][personIndex]=checked
 
-                saveState();
+                updateRowHighlight(itemIndex)
+
+                saveState()
             }
 
             function renderTable() {
@@ -214,7 +222,7 @@
                 html += "</tr></thead><tbody>";
 
                 items.forEach((item, itemIndex) => {
-                    html += "<tr>";
+                    html += `<tr data-item="${itemIndex}">`;
 
                     html += `<td>${item.name}</td>`;
 
@@ -230,16 +238,17 @@
                     people.forEach((_, personIndex) => {
                         const checked = selections[itemIndex] && selections[itemIndex][personIndex];
 
-                        html += `
-                            <td>
-                            <input
-                            type="checkbox"
-                            ${checked ? "checked" : ""}
-                            onchange="toggleSelection(${itemIndex},${personIndex},this.checked)"
-                            >
-                            </td>
-                            `;
-                    });
+                    html+=`
+                        <td>
+                        <input
+                        type="checkbox"
+                        data-item="${itemIndex}"
+                        ${checked?"checked":""}
+                        onchange="toggleSelection(${itemIndex},${personIndex},this.checked)"
+                        >
+                        </td>
+                        `;
+                        });
 
                     html += `<td></td>`;
 
@@ -251,6 +260,8 @@
                 html += "</table>";
 
                 container.innerHTML = html;
+
+                items.forEach((_,i)=>updateRowHighlight(i))
             }
 
             function calculate() {
@@ -309,6 +320,26 @@
                 selections = {};
 
                 renderTable();
+            }
+
+            function updateRowHighlight(itemIndex){
+
+                const row=document.querySelector(`tr[data-item='${itemIndex}']`)
+                
+                if(!row)return
+
+                const checkboxes=row.querySelectorAll("input[type=checkbox]")
+
+                let anyChecked=false
+
+                checkboxes.forEach(cb=>{
+                    if(cb.checked) anyChecked=true
+                })
+
+                if(anyChecked)
+                    row.classList.remove("unassigned-row")
+                else
+                    row.classList.add("unassigned-row")
             }
 
             loadState();
