@@ -1,10 +1,240 @@
+<!-- file: index.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Splitting the Bill</title>
+<meta charset="UTF-8">
+<title>Bill Splitter</title>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    margin:40px;
+}
+
+.controls{
+    margin-bottom:20px;
+}
+
+input{
+    padding:6px;
+}
+
+button{
+    padding:6px 10px;
+    margin-left:5px;
+}
+
+table{
+    border-collapse: collapse;
+    margin-top:20px;
+}
+
+th,td{
+    border:1px solid #ccc;
+    padding:8px;
+    text-align:center;
+}
+
+th{
+    background:#f2f2f2;
+}
+
+tfoot td{
+    font-weight:bold;
+    background:#eef;
+}
+</style>
 </head>
+
 <body>
-  <h1>Splitting the Bill</h1>
-  <p>Simple webpage to split the bill</p>
+
+<h1>Bill Splitter</h1>
+
+<div class="controls">
+<input id="personName" placeholder="Person name">
+<button onclick="addPerson()">Add Person</button>
+</div>
+
+<div class="controls">
+<input id="itemName" placeholder="Item name">
+<input id="itemCost" type="number" step="0.01" placeholder="Cost">
+<button onclick="addItem()">Add Item</button>
+</div>
+
+<button onclick="calculate()">Calculate Split</button>
+<button onclick="clearAll()">Reset</button>
+
+<div id="tableContainer"></div>
+
+<script>
+let people = [];
+let items = [];
+let selections = {};
+
+const STORAGE_KEY = "bill_splitter_data";
+
+function saveState(){
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({people, items, selections})
+    );
+}
+
+function loadState(){
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if(!saved) return;
+
+    const data = JSON.parse(saved);
+
+    people = data.people || [];
+    items = data.items || [];
+    selections = data.selections || {};
+}
+
+function addPerson(){
+    const input = document.getElementById("personName");
+    const name = input.value.trim();
+    if(!name) return;
+
+    people.push(name);
+    input.value="";
+
+    saveState();
+    renderTable();
+}
+
+function addItem(){
+    const nameInput = document.getElementById("itemName");
+    const costInput = document.getElementById("itemCost");
+
+    const name = nameInput.value.trim();
+    const cost = parseFloat(costInput.value);
+
+    if(!name || isNaN(cost)) return;
+
+    items.push({name, cost});
+    nameInput.value="";
+    costInput.value="";
+
+    saveState();
+    renderTable();
+}
+
+function toggleSelection(itemIndex, personIndex, checked){
+
+    if(!selections[itemIndex])
+        selections[itemIndex] = {};
+
+    selections[itemIndex][personIndex] = checked;
+
+    saveState();
+}
+
+function renderTable(){
+
+    const container = document.getElementById("tableContainer");
+
+    if(people.length===0 || items.length===0){
+        container.innerHTML="";
+        return;
+    }
+
+    let html="<table>";
+
+    html+="<thead><tr>";
+    html+="<th>Item</th><th>Cost</th>";
+
+    people.forEach(p=>{
+        html+=`<th>${p}</th>`;
+    });
+
+    html+="</tr></thead><tbody>";
+
+    items.forEach((item,itemIndex)=>{
+
+        html+="<tr>";
+        html+=`<td>${item.name}</td>`;
+        html+=`<td>${item.cost.toFixed(2)}</td>`;
+
+        people.forEach((_,personIndex)=>{
+
+            const checked =
+                selections[itemIndex] &&
+                selections[itemIndex][personIndex];
+
+            html+=`
+            <td>
+            <input type="checkbox"
+            ${checked ? "checked":""}
+            onchange="toggleSelection(${itemIndex},${personIndex},this.checked)">
+            </td>
+            `;
+        });
+
+        html+="</tr>";
+    });
+
+    html+="</tbody>";
+    html+="<tfoot id='totalsRow'></tfoot>";
+    html+="</table>";
+
+    container.innerHTML=html;
+}
+
+function calculate(){
+
+    const totals = new Array(people.length).fill(0);
+
+    items.forEach((item,itemIndex)=>{
+
+        if(!selections[itemIndex]) return;
+
+        const contributors = Object.entries(selections[itemIndex])
+            .filter(([_,v])=>v).length;
+
+        if(contributors===0) return;
+
+        const share = item.cost / contributors;
+
+        Object.entries(selections[itemIndex])
+        .forEach(([personIndex,checked])=>{
+            if(checked)
+                totals[personIndex]+=share;
+        });
+    });
+
+    renderTotals(totals);
+}
+
+function renderTotals(totals){
+
+    let html="<tr><td colspan='2'>Total</td>";
+
+    totals.forEach(v=>{
+        html+=`<td>${v.toFixed(2)}</td>`;
+    });
+
+    html+="</tr>";
+
+    document.getElementById("totalsRow").innerHTML=html;
+}
+
+function clearAll(){
+
+    if(!confirm("Reset everything?")) return;
+
+    localStorage.removeItem(STORAGE_KEY);
+
+    people=[];
+    items=[];
+    selections={};
+
+    renderTable();
+}
+
+loadState();
+renderTable();
+</script>
+
 </body>
 </html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>IndexedDB Example</title>
+</head>
+<body>
+
+<h2>IndexedDB Notes</h2>
+
+<input id="noteInput" placeholder="Write a note">
+<button onclick="saveNote()">Save</button>
+<button onclick="loadNotes()">Load Notes</button>
+
+<ul id="notes"></ul>
+
+<script>
+let db;
+
+// open database
+const request = indexedDB.open("NotesDB", 1);
+
+request.onupgradeneeded = function(event) {
+  db = event.target.result;
+  db.createObjectStore("notes", { autoIncrement: true });
+};
+
+request.onsuccess = function(event) {
+  db = event.target.result;
+};
+
+function saveNote() {
+  const note = document.getElementById("noteInput").value;
+
+  const tx = db.transaction("notes", "readwrite");
+  const store = tx.objectStore("notes");
+
+  store.add(note);
+}
+
+function loadNotes() {
+  const list = document.getElementById("notes");
+  list.innerHTML = "";
+
+  const tx = db.transaction("notes", "readonly");
+  const store = tx.objectStore("notes");
+
+  const request = store.openCursor();
+
+  request.onsuccess = function(event) {
+    const cursor = event.target.result;
+
+    if (cursor) {
+      const li = document.createElement("li");
+      li.textContent = cursor.value;
+      list.appendChild(li);
+
+      cursor.continue();
+    }
+  };
+}
+</script>
+
+</body>
+</html>
